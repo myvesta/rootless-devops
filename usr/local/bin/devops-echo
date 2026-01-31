@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Usage:   sudo devops-echo <string> <file_path>
+# Example: sudo devops-echo "Hello world!" /etc/test.txt
+# it is equivalent to: echo "Hello world!" > /etc/test.txt
+
+if [ $# -ne 2 ]; then
+    echo "ERROR: Invalid number of arguments"
+    echo "Usage:   sudo devops-echo <string> <file_path>"
+    echo "Example: sudo devops-echo \"Hello world!\" /etc/test.txt"
+    echo "It is equivalent to: echo \"Hello world!\" > /etc/test.txt"
+    exit 1
+fi
+
+source /usr/local/bin/devops-func.sh
+MODE="write"
+startup_checks "$MODE" "$2"
+is_allowed_path_for_mode "$MODE" "$2"
+
+/usr/bin/echo "$1" > "$2"
+exit $?

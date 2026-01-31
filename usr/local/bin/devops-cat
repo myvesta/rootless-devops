@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source /usr/local/bin/devops-func.sh
+MODE="read"
+startup_checks "$MODE" "$1"
+is_allowed_path_for_mode "$MODE" "$1"
+
+/usr/bin/cat $1
+exit $?
