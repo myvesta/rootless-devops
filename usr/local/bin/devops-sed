@@ -4,7 +4,9 @@
 # Example1: sudo devops-sed 1 -i 's/old/new/' /etc/test.txt
 # Example2: sudo devops-sed 2 -i "s/old/new/" /etc/test.txt
 
-if [ $# -ne 4 ]; then
+number_of_arguments=$#
+
+if [ $number_of_arguments -ne 4 ]; then
     echo "ERROR: Invalid number of arguments"
     echo "Usage:    sudo devops-sed <1=single quote, 2=double quote> -i <search-replace regex> <file_path>"
     echo "Example1: sudo devops-sed 1 -i 's/old/new/' /etc/test.txt"

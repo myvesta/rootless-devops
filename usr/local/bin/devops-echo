@@ -4,7 +4,9 @@
 # Example: sudo devops-echo "Hello world!" /etc/test.txt
 # it is equivalent to: echo "Hello world!" > /etc/test.txt
 
-if [ $# -ne 2 ]; then
+number_of_arguments=$#
+
+if [ $number_of_arguments -ne 2 ]; then
     echo "ERROR: Invalid number of arguments"
     echo "Usage:   sudo devops-echo <string> <file_path>"
     echo "Example: sudo devops-echo \"Hello world!\" /etc/test.txt"
