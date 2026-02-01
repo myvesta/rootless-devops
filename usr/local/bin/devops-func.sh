@@ -33,7 +33,7 @@ banned_paths=(
 conf_owner=$(stat -c "%U" /usr/local/bin/devops-override-conf)
 conf_group=$(stat -c "%G" /usr/local/bin/devops-override-conf)
 conf_mode=$(stat -c "%a" /usr/local/bin/devops-override-conf)
-if [ "$conf_owner" = "root" ] && [ "$conf_group" = "root" ] && [ "$conf_mode" = "0644" ]; then
+if [ "$conf_owner" = "root" ] && [ "$conf_group" = "root" ] && [ "$conf_mode" = "644" ]; then
     source /usr/local/bin/devops-override-conf
 fi
 
