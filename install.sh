@@ -23,3 +23,7 @@ chmod 440 /etc/sudoers.d/devops
 cp -r usr/local/bin/* /usr/local/bin/
 chmod +x /usr/local/bin/devops-*
 chmod -x /usr/local/bin/devops-func.sh
+
+touch /usr/local/bin/devops-override-conf
+chown root:root /usr/local/bin/devops-override-conf
+chmod 0644 /usr/local/bin/devops-override-conf
