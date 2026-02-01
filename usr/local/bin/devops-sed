@@ -1,34 +1,35 @@
 #!/bin/bash
 
-# Usage:   sudo devops-sed <1=single quote, 2=double quote> -i <search-replace regex> <file_path>
-# Example1: sudo devops-sed 1 -i 's/old/new/' /etc/test.txt
-# Example2: sudo devops-sed 2 -i "s/old/new/" /etc/test.txt
+# Usage:   sudo devops-sed -i <search-replace regex> <file_path>
+# Example1: sudo devops-sed -i 's/old/new/' /etc/test.txt
+# Example2: sudo devops-sed -i "s/old/new/" /etc/test.txt
 
 number_of_arguments=$#
 
-if [ $number_of_arguments -ne 4 ]; then
+if [ $number_of_arguments -ne 3 ]; then
     echo "ERROR: Invalid number of arguments"
-    echo "Usage:    sudo devops-sed <1=single quote, 2=double quote> -i <search-replace regex> <file_path>"
-    echo "Example1: sudo devops-sed 1 -i 's/old/new/' /etc/test.txt"
-    echo "Example2: sudo devops-sed 2 -i "s/old/new/" /etc/test.txt"
+    echo "Usage:    sudo devops-sed -i <search-replace regex> <file_path>"
+    echo "Example1: sudo devops-sed -i 's/old/new/' /etc/test.txt"
+    echo "Example2: sudo devops-sed -i "s/old/new/" /etc/test.txt"
     exit 1
 fi
 
 source /usr/local/bin/devops-func.sh
 MODE="write"
 
-quote_type="$1" # 1=single quote, 2=double quote
-argument1="$2" # -i
-argument2="$3" # search-replace regex
-file_path="$4" # file path
-
-shift
+#quote_type="$1" # 1=single quote, 2=double quote
+argument1="$1" # -i
+argument2="$2" # search-replace regex
+file_path="$3" # file path
 shift
 shift
 
-if [ "$quote_type" != "1" ] && [ "$quote_type" != "2" ]; then
-    echo "ERROR: First argument must be: 1 or 2 (1=single quote, 2=double quote)"
-    exit 1
+if [[ "$argument2" == *\"* ]]; then
+    quote_type="1"
+elif [[ "$argument2" == *\'* ]]; then
+    quote_type="2"
+else
+    quote_type="1"
 fi
 
 allowed_parameters=0
@@ -37,12 +38,12 @@ if [ "$argument1" == "-i" ]; then
 fi
 
 if [ $allowed_parameters -eq 0 ]; then
-    echo "ERROR: Second argument must be: -i"
+    echo "ERROR: First argument must be: -i"
     exit 1
 fi
 
-startup_checks "$MODE" "$1"
-is_allowed_path_for_mode "$MODE" "$1"
+startup_checks "$MODE" "$file_path"
+is_allowed_path_for_mode "$MODE" "$file_path"
 
 if [ "$quote_type" == "1" ]; then
     command="/usr/bin/sed -i '$argument2' \"$file_path\""

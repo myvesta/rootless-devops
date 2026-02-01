@@ -1,0 +1,65 @@
+#!/bin/bash
+
+source /usr/local/bin/devops-func.sh
+MODE="read"
+
+number_of_arguments=$#
+
+if [ $number_of_arguments -lt 1 ]; then
+    echo "ERROR: Invalid number of arguments"
+    echo "Usage:   sudo devops-stat -c <format> <file_path>"
+    echo "Example: sudo devops-stat -c \"%a\" /etc/test.txt"
+    exit 1
+fi
+
+if [ $number_of_arguments -eq 1 ]; then
+    file_path="$1"
+fi
+if [ $number_of_arguments -eq 2 ]; then
+    argument="$1" # -c
+    file_path="$2" # file path
+    shift
+fi
+if [ $number_of_arguments -eq 3 ]; then
+    argument="$1" # -c
+    format="$2" # format
+    file_path="$3" # file path
+    shift
+    shift
+
+    allowed_parameters=0
+    if [ "$argument" == "-c" ]; then
+        allowed_parameters=1
+    fi
+
+    if [ $allowed_parameters -eq 0 ]; then
+        echo "ERROR: First argument must be: -c"
+        exit 1
+    fi
+
+    if [ "$argument" == "-c" ]; then
+        # Validate $format if it is set (when called with -c <format> <file>)
+        if [ ! -z "$format" ]; then
+            # Allow any number of sequences starting with % followed by a single letter (upper or lowercase), no spaces between
+            format_regex='^(%[a-zA-Z])+$'
+            if [[ ! "$format" =~ $format_regex ]]; then
+                echo "ERROR: Invalid format string: $format"
+                echo "Valid examples: %a, %a%B, %A%b%c"
+                exit 1
+            fi
+        fi
+    fi
+fi
+
+
+startup_checks "$MODE" "$file_path"
+is_allowed_path_for_mode "$MODE" "$file_path"
+
+if [ $number_of_arguments -eq 1 ]; then
+    /usr/bin/stat "$file_path"
+elif [ $number_of_arguments -eq 2 ]; then
+    /usr/bin/stat $argument "$file_path"
+elif [ $number_of_arguments -eq 3 ]; then
+    /usr/bin/stat $argument $format "$file_path"
+fi
+exit $?

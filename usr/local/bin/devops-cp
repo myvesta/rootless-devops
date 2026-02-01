@@ -44,7 +44,6 @@ is_allowed_path_for_mode "$MODE" "$file_path2"
 if [ $number_of_arguments -eq 2 ]; then
     /usr/bin/cp "$file_path1" "$file_path2"
 elif [ $number_of_arguments -eq 3 ]; then
-    echo "Running: /usr/bin/cp $argument \"$file_path1\" \"$file_path2\""
     /usr/bin/cp $argument "$file_path1" "$file_path2"
 fi
 

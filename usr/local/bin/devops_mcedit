@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /usr/local/bin/devops-func.sh
+MODE="write"
+startup_checks "$MODE" "$1"
+is_allowed_path_for_mode "$MODE" "$1"
+
+filename="$1"
+basename=$(basename "$filename")
+filename_tmp="/tmp/devops_mcedit_tmp_$basename"
+
+if [ -f "$filename_tmp" ]; then
+    rm -f "$filename_tmp"
+fi
+
+file_permissions=$(sudo /usr/local/bin/devops-stat -c "%a" "$filename")
+file_owner=$(sudo /usr/local/bin/devops-stat -c "%U" "$filename")
+file_group=$(sudo /usr/local/bin/devops-stat -c "%G" "$filename")
+
+sudo /usr/local/bin/devops-cp "$filename" "$filename_tmp"
+sudo /usr/local/bin/devops-chmod "644" "$filename_tmp"
+sudo /usr/local/bin/devops-chown "devops:devops" "$filename_tmp"
+
+/usr/bin/mcedit "$filename_tmp" # run under non-privileged user
+
+sudo /usr/local/bin/devops-mv "$filename_tmp" "$filename"
+sudo /usr/local/bin/devops-chmod "$file_permissions" "$filename"
+sudo /usr/local/bin/devops-chown "$file_owner:$file_group" "$filename"
+
+exit $?

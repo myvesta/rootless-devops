@@ -3,11 +3,13 @@
 allowed_paths_for_read=(
     "/etc/"
     "/var/log/"
+    "/tmp/"
 )
 
 allowed_paths_for_write=(
     "/etc/"
     "/var/log/"
+    "/tmp/"
 )
 
 banned_paths=(
@@ -29,9 +31,12 @@ banned_paths=(
 )
 
 startup_checks() {
-    if [ -z "$2" ]; then
-        echo "Usage: $0 <file>"
-        exit 1
+    if [ "$1" == "read" ] || [ "$1" == "write" ]; then
+        if [ -z "$2" ]; then
+            #echo "Parameters: [$0] $1 $2" # for debugging
+            echo "Usage: $0 <file>"
+            exit 1
+        fi
     fi
 
     if [ "$1" == "read" ]; then
