@@ -10,7 +10,7 @@ if ! id "devops" &>/dev/null; then
     chown -R devops:devops /home/devops
 fi
 
-cd /root
+cd /home/devops
 if [ -d "rootless-devops" ]; then
     rm -rf rootless-devops
 fi
