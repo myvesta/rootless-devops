@@ -1,0 +1,107 @@
+#!/bin/bash
+
+allowed_commands=(
+    "start"
+    "stop"
+    "restart"
+    "reload"
+    "status"
+    "reset-failed"
+    "enable"
+    "disable"
+    "daemon-reload"
+    "list-units"
+    "list-unit-files"
+    "show"
+)
+
+allowed_services=(
+    "apache2"
+    "nginx"
+    "php*"
+    "bind9"
+    "exim4"
+    "dovecot"
+    "clamav-daemon"
+    "clamav-freshclam"
+    "spamassassin"
+    "spamd"
+    "mysql"
+    "mariadb"
+    "proftpd"
+    "vsftpd"
+    "cron"
+    "ssh"
+    "vesta-nginx"
+    "vesta-php"
+    "fail2ban"
+    "memcached"
+    "redis"
+)
+
+source /usr/local/bin/devops-func.sh
+MODE="system"
+
+number_of_arguments=$#
+
+if [ $number_of_arguments -lt 1 ]; then
+    echo "ERROR: Invalid number of arguments"
+    echo "Usage:   sudo devops-systemctl <command>"
+    echo "Example: sudo devops-systemctl start <service>"
+    exit 1
+fi
+
+command="$1" # start, stop, restart, reload, status, reset-failed, enable, disable, daemon-reload, list-units, list-unit-files, show
+if [ $number_of_arguments -eq 2 ]; then
+    service="$2" # service name
+fi
+
+startup_checks "$MODE" "$service"
+
+
+allowed_command_found=0
+for allowed_command in "${allowed_commands[@]}"; do
+    if [ "$command" == "$allowed_command" ]; then
+        allowed_command_found=1
+        break
+    fi
+done
+
+if [ $allowed_command_found -eq 0 ]; then
+    echo "ERROR: Invalid command: $command"
+    echo "Allowed commands: ${allowed_commands[@]}"
+    exit 1
+fi
+
+if [ $number_of_arguments -eq 2 ]; then
+    allowed_service_found=0
+    for allowed_service in "${allowed_services[@]}"; do
+        if [[ "$allowed_service" == *"*"* ]]; then
+            if [[ "$service" == "${allowed_service//\*/}"* ]]; then
+                allowed_service_found=1
+                break
+            fi
+        else
+            if [ "$service" == "$allowed_service" ]; then
+                allowed_service_found=1
+                break
+            fi
+        fi
+    done
+
+    if [ $allowed_service_found -eq 0 ]; then
+        echo "ERROR: Invalid service: $service"
+        echo "Allowed services: ${allowed_services[@]}"
+        exit 1
+    fi
+fi
+
+if [ $number_of_arguments -eq 1 ]; then
+    /usr/bin/systemctl $command
+fi
+
+if [ $number_of_arguments -eq 2 ]; then
+    /usr/bin/systemctl $command $service
+fi
+
+exit $?
