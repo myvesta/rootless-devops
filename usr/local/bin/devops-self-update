@@ -1,5 +1,5 @@
 #!/bin/bash
 
-wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /root/install-rootless-devops.sh
-bash /root/install-rootless-devops.sh
-rm /root/install-rootless-devops.sh
+wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /home/devops/install-rootless-devops.sh
+bash /home/devops/install-rootless-devops.sh
+rm /home/devops/install-rootless-devops.sh
