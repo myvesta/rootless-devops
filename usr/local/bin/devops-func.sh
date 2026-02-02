@@ -30,6 +30,9 @@ banned_paths=(
     "/etc/cron"
 )
 
+allowed_commands_for_privilege_escalation=(
+)
+
 conf_owner=$(stat -c "%U" /usr/local/bin/devops-override-conf)
 conf_group=$(stat -c "%G" /usr/local/bin/devops-override-conf)
 conf_mode=$(stat -c "%a" /usr/local/bin/devops-override-conf)

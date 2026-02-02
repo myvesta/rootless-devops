@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /usr/local/bin/devops-func.sh
+
+for command in "${allowed_commands_for_privilege_escalation[@]}"; do
+    if [ "$1" == "$command" ]; then
+        "$@"
+        exit $?
+    fi
+done
+
+echo "ERROR: Command not allowed: $1"
+echo "Allowed commands for privilege escalation: ${allowed_commands_for_privilege_escalation[@]}"
+exit 1
