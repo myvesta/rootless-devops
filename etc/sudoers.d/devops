@@ -1,1 +1,1 @@
-devops ALL=(root) NOPASSWD: /usr/bin/apt update, /usr/bin/apt upgrade, /usr/bin/apt remove, /usr/local/bin/devops-*, /usr/bin/top, /usr/sbin/iotop, /usr/sbin/iftop, /usr/sbin/reboot
+devops ALL=(root) NOPASSWD: /usr/bin/apt update, /usr/bin/apt upgrade, /usr/bin/apt remove, /usr/bin/journalctl, /usr/bin/top, /usr/sbin/iotop, /usr/sbin/iftop, /usr/sbin/reboot, /usr/local/bin/devops-*
