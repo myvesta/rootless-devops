@@ -1,4 +1,10 @@
-# rootless-devops
+# Brief description of the project
+
+This project allows a system administrator to use a `devops` account that allows them to administer the server without having the ability to see the /home folder, user data, and their databases.
+
+There are `/usr/local/bin/devops-*` scripts that allow service managment, viewing and editing files with elevated privileges for specific allowlisted paths.
+
+# Project "rootless-devops" full description
 
 Restricted-access DevOps maintenance model for Debian/Ubuntu servers (GDPR-aligned)
 
@@ -6,13 +12,14 @@ This project implements a practical “rootless” operations approach for infra
 
 The main idea is simple:
 
-- we can maintain the operating system and core services,
-- we cannot practically access customer content, application files, or database contents,
-- privileged actions are limited to an explicit allowlist and are auditable.
+- The server owner wants you to administer his server but at the same time he doesn't want you to be able to see the user data on the server.
+- With this scripts you can maintain the operating system and core services,
+- You cannot access customer content, application files, or database contents,
+- Privileged actions are limited to an explicit allowlist and are auditable.
 
 ## Why this exists
 
-Many teams need to provide OS and service maintenance (patching, restarts, troubleshooting) while minimizing access to hosted data. This repository provides a structured way to enforce:
+Many teams need to provide OS and service maintenance (system updates, service restarts, troubleshooting) while minimizing access to hosted data. This repository provides a structured way to enforce:
 
 - least privilege,
 - data minimization,
@@ -25,8 +32,7 @@ and to support GDPR-aligned operational expectations around access control and a
 
 A set of scripts and wrappers that:
 
-- introduce a dedicated Unix user (example: `devops`) for maintenance work,
-- disable direct root SSH access,
+- introduce a dedicated Unix user (`devops` user) for maintenance work (so you don't need root SSH access),
 - allow only specific elevated commands via sudo (allowlist),
 - restrict file access to configuration and logs only (path-based guardrails),
 - provide a controlled `systemctl` wrapper limited to allowlisted services,
@@ -38,6 +44,35 @@ A set of scripts and wrappers that:
 - an application administration toolkit (WordPress admin, CRM admin, etc.)
 - a database administration tool
 - a sandbox, container, or full MAC policy system (it complements those, but does not replace them)
+
+## Requirements
+
+- Debian or Ubuntu server
+- SSH key-based access
+- Installed `sudo` command
+- Recommended: VPN-only access to the SSH maintenance entry point
+- Recommended: Hardware-backed SSH keys (YubiKey or similar)
+
+## Installation
+
+Under the `root` account run:
+```
+wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /root/install-rootless-devops.sh
+bash /root/install-rootless-devops.sh
+```
+
+Installer script will:
+
+1. Create a dedicated `devops` user
+2. Install wrapper scripts such as `devops-systemctl`
+3. Configure `sudo` allowlist for the `devops` user
+
+After install, you should:
+1. Add your SSH keys to `/home/devops/.ssh/authorized_keys`
+2. (Optional) Configure allowlisted services and allowed paths in `/usr/local/bin/devops-override-conf` (see array format and variable names at the beginning of the file `/usr/local/bin/devops-func.sh`)
+3. Verify if `devops` SSH login works, verify if `devops-*` command works, and confirm forbidden paths are blocked.
+4. Remove your SSH keys from `/root/.ssh/authorized_keys`
+5. Explain to the server owner how to change the root password, as well as the password for the hosting panel, backup, etc.
 
 ## Threat model (practical)
 
@@ -73,12 +108,12 @@ Examples of allowed categories:
 
 #### Patch management
 Allowed for OS security and stability maintenance:
-- `apt update`
-- `apt upgrade`
-- `apt remove`
+- `sudo apt update`
+- `sudo apt upgrade`
+- `sudo apt remove`
 
 Not allowed:
-- `apt install` (prevents installing new tooling during routine access)
+- `sudo apt install` (prevents installing new tooling during routine access)
 
 #### Service control (wrapped as `devops-systemctl`)
 Allowed operations (for allowlisted services only):
@@ -95,20 +130,22 @@ Typical allowlisted services for hosting operations:
 
 #### System diagnostics (read-only)
 Allowed to diagnose performance and incidents without reading customer content:
-- `top` (or `htop`)
-- `du` (restricted usage)
-- `iotop`
-- `iftop`
+- `sudo top`
+- `sudo iotop`
+- `sudo iftop`
+- `sudo reboot`
 
 #### Hosting panel maintenance commands (optional)
 If you use a hosting panel and want to permit maintenance-only actions (not admin access), you can allow a limited list of panel maintenance commands.
 
 Example (myVesta):
-- `v-update-myvesta`
-- `v-clean-garbage`
+- `sudo /usr/local/bin/devops-run-allowlisted-command /usr/local/vesta/bin/v-update-myvesta`
+- `sudo /usr/local/bin/devops-run-allowlisted-command /usr/local/vesta/bin/v-clean-garbage`
 
 A common pattern is to keep these in a root-owned allowlist file, for example:
 - `/usr/local/bin/devops-override-conf`
+
+See array format and variable names at the beginning of the file `/usr/local/bin/devops-func.sh`.
 
 Only `root` should be able to extend that list.
 
@@ -117,19 +154,19 @@ Only `root` should be able to extend that list.
 To support troubleshooting while preventing access to hosted content, wrapper commands enforce path restrictions. Even if a wrapper runs as root, it only allows operations on explicitly approved locations.
 
 Wrappers commonly included:
-- `devops-cat`
-- `devops-chmod`
-- `devops-chown`
-- `devops-cp`
-- `devops-echo`
-- `devops-mv`
-- `devops-rm`
-- `devops-sed`
-- `devops-stat`
-- `devops-tail`
-- `devops-self-update` (fetches updates from this repo)
-- `devops-mcview`
-- `devops-mcedit` (partially elevated)
+- `sudo devops-cat`
+- `sudo devops-chmod`
+- `sudo devops-chown`
+- `sudo devops-cp`
+- `sudo devops-echo`
+- `sudo devops-mv`
+- `sudo devops-rm`
+- `sudo devops-sed`
+- `sudo devops-stat`
+- `sudo devops-tail`
+- `sudo devops-self-update` (fetches updates from this repo)
+- `sudo devops-mcview`
+- `devops_mcedit` (partially elevated)
 
 Allowed file locations (typical):
 - `/etc/`
@@ -192,26 +229,6 @@ Sometimes a serious incident cannot be resolved with the restricted model alone.
 
 Do not normalize “temporary root” as part of routine maintenance.
 
-## Requirements
-
-- Debian or Ubuntu server
-- SSH key-based access
-- sudo
-- recommended: VPN-only access to the maintenance entry point
-- recommended: hardware-backed SSH keys (YubiKey or similar)
-
-## Installation (high level)
-
-Exact steps can differ per environment, but the typical flow is:
-
-1. Create a dedicated user (example: `devops`)
-2. Disable direct root SSH login
-3. Install wrapper scripts and `devops-systemctl`
-4. Configure sudo allowlist for the `devops` user
-5. Configure allowlisted services and allowed paths
-6. (Optional) Configure hosting panel maintenance allowlist
-7. Verify logging, confirm forbidden paths are blocked
-
 ## Configuration concepts
 
 ### Allowlisted commands
@@ -224,19 +241,24 @@ Wrappers must validate the target path:
 - must pass realpath checks to prevent symlink tricks
 
 ### Allowlisted services
-`devops-systemctl` should only accept known service names. Everything else should be rejected.
+`sudo devops-systemctl` should only accept known service names. Everything else should be rejected.
 
 ## Usage examples (typical)
 
-- check service status:
-  - `devops-systemctl status nginx`
-- restart a service:
-  - `devops-systemctl restart php-fpm`
-- view logs:
-  - `devops-tail /var/log/nginx/error.log`
-- view config file (if allowed):
-  - `devops-cat /etc/nginx/nginx.conf`
-- run patching (allowed subset):
+- Check service status:
+  - `sudo devops-systemctl status nginx`
+- Restart a service:
+  - `sudo devops-systemctl restart php-fpm`
+- View logs:
+  - `sudo devops-tail -f /var/log/nginx/error.log`
+- Copy files:
+  - `sudo devops-cp /etc/fstab /etc/fstab.backup`
+- View config file (if allowed):
+  - `sudo devops-cat /etc/nginx/nginx.conf`
+  - `sudo devops-mcview /etc/nginx/nginx.conf`
+- Edit config file (if allowed):
+  - `devops_mcedit /etc/nginx/nginx.conf` (the only devops command without `sudo`)
+- Update system software (allowed subset):
   - `sudo apt update`
   - `sudo apt upgrade`
 
