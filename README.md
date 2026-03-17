@@ -1,303 +1,314 @@
-# Brief description of the project
+# Access limitation and GDPR-aligned operational model for the Debian server with myVesta hosting panel
 
-This project allows a system administrator to use a `devops` account that allows them to administer the server without having the ability to see the /home folder, user data, and their databases.
+## 1. Purpose
+This document defines the technical and organizational measures used to ensure strict separation between infrastructure maintenance and access to Swiss personal data hosted on the server. It provides an audit-ready explanation of how infrastructure maintenance can be performed without practical access to customer data, and how any exceptional access is handled under client control.
 
-There are `/usr/local/bin/devops-*` scripts that allow service managment, viewing and editing files with elevated privileges for specific allowlisted paths.
+**The goal is that:**
+* We can maintain the operating system and core services (security updates, configuration, availability).
+* We do not have practical, routine, or direct read access to WordPress databases, customer content, or user uploads.
+* Privileged actions are limited to an explicit allowlist and are auditable.
+* The client retains full control over any access that could lead to customer data exposure.
 
-# Project "rootless-devops" full description
+### Important note on the operational baseline
+From the start of this cooperation, our standard operational approach is infrastructure-only maintenance. We do not need, request, or use access to website files, WordPress configuration files, uploads, or database contents to perform OS-level maintenance.
 
-Restricted-access DevOps maintenance model for Debian/Ubuntu servers (GDPR-aligned)
+This document formalizes and hardens that approach into a GDPR-aligned model suitable for audits, ownership changes, and third-country access risk mitigation.
 
-This project implements a practical “rootless” operations approach for infrastructure maintenance on Debian/Ubuntu servers, including servers running hosting panels such as myVesta.
+---
 
-The main idea is simple:
+## 2. Scope
+This document applies to:
+* Debian server running **myVesta** and core infrastructure services.
+* Our support and maintenance access used strictly for OS and infrastructure administration.
 
-- The server owner wants you to administer his server but at the same time he doesn't want you to be able to see the user data on the server.
-- With this scripts you can maintain the operating system and core services,
-- You cannot access customer content, application files, or database contents,
-- Privileged actions are limited to an explicit allowlist and are auditable.
+**This document does not cover:**
+* Application administration (WordPress admin, plugins, WooCommerce, CRM, etc.).
+* Customer database administration and data handling.
+* Hosting panel administration under client credentials (except limited maintenance commands explicitly allowlisted below).
 
-## Why this exists
+---
 
-Many teams need to provide OS and service maintenance (system updates, service restarts, troubleshooting) while minimizing access to hosted data. This repository provides a structured way to enforce:
+## 3. Roles and Responsibilities
 
-- least privilege,
-- data minimization,
-- segregation of duties,
-- auditability,
+### 3.1 Client (Data Owner / Controller)
+* Owns the data and determines purposes and means of processing.
+* Retains control over hosting panel admin credentials and root-level access.
+* Retains control over application credentials and database credentials.
+* Approves any action outside routine OS maintenance, especially anything that could affect hosted applications or expose data.
 
-and to support GDPR-aligned operational expectations around access control and accountability.
+### 3.2 Us (Maintenance Provider)
+* Act as OS and infrastructure administrators only, within the restricted-access model described here.
+* Perform security maintenance, reliability operations, and incident response on OS and core services.
+* Do not administer customer applications.
+* Do not access or process customer database contents as part of standard maintenance.
 
-## What this is
+---
 
-A set of scripts and wrappers that:
+## 4. Access Design Principles
 
-- introduce a dedicated Unix user (`devops` user) for maintenance work (so you don't need root SSH access),
-- allow only specific elevated commands via sudo (allowlist),
-- restrict file access to configuration and logs only (path-based guardrails),
-- provide a controlled `systemctl` wrapper limited to allowlisted services,
-- optionally allow a small set of hosting-panel maintenance commands.
+### 4.1 Least Privilege
+* No shared root access for daily work.
+* No general-purpose interactive root shell for our team.
+* Only allowlisted commands on allowlisted paths can run with elevated privileges via `sudo`.
 
-## What this is not
+### 4.2 Data Minimization
+* Commands and tooling are selected for infrastructure operations only.
+* File viewing and editing are restricted to explicitly allowlisted operational paths (Section 10), and not to customer data locations.
 
-- a hosting panel, or a replacement for one
-- an application administration toolkit (WordPress admin, CRM admin, etc.)
-- a database administration tool
-- a sandbox, container, or full MAC policy system (it complements those, but does not replace them)
+### 4.3 Segregation of Duties
+* We do not have client hosting panel administrator credentials.
+* We do not have customer application credentials.
+* We do not have database administrator credentials.
 
-## Requirements
+### 4.4 Auditability
+* Privileged actions are executed via `sudo` with logging.
+* Authentication events and `sudo` events are available for review and audit evidence.
 
-- Debian or Ubuntu server
-- SSH key-based access
-- Installed `sudo` command
-- Recommended: VPN-only access to the SSH maintenance entry point
-- Recommended: Hardware-backed SSH keys (YubiKey or similar)
+---
 
-## Installation
+## 5. Accounts and Authentication
 
-Under the `root` account run:
-```
-wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /root/install-rootless-devops.sh
-bash /root/install-rootless-devops.sh
-```
+### 5.1 Maintenance Account
+We use a dedicated Unix account for infrastructure maintenance:
+* **User:** `devops`
+* **Purpose:** OS maintenance with restricted `sudo` privileges (allowlist model).
+* **Authentication:** SSH keys stored on YubiKey (OpenPGP) per engineer.
+* No credential sharing.
+* VPN-only access (mandatory).
 
-Installer script will:
+### 5.2 Root Access Model
+Root access is client-controlled.
+* Direct root SSH password login is disabled.
+* Root access is available only via SSH key authentication (YubiKey) controlled by the client.
+* Our engineers do not retain client root keys as part of standard maintenance.
 
-1. Create a dedicated `devops` user
-2. Install wrapper scripts such as `devops-systemctl`
-3. Configure `sudo` allowlist for the `devops` user
+---
 
-After install, you should:
-1. Add your SSH keys to `/home/devops/.ssh/authorized_keys`
-2. (Optional) Configure allowlisted services and allowed paths in `/usr/local/bin/devops-override-conf` (see array format and variable names at the beginning of the file `/usr/local/bin/devops-func.sh`)
-3. Verify if `devops` SSH login works, verify if `devops-*` command works, and confirm forbidden paths are blocked.
-4. Remove your SSH keys from `/root/.ssh/authorized_keys`
-5. Explain to the server owner how to change the root password, as well as the password for the hosting panel, backup, etc.
+## 6. Launch Phase (Activation Procedure)
+This section describes the steps to activate the restricted-access model. This procedure can be attached to an audit as proof of implementation.
 
-## Threat model (practical)
+### 6.1 Prerequisites
+* Client provides their own pre-generated YubiKey SSH public keys for root access.
+* Client confirms maintenance window for applying the changes.
+* Client confirms `devops` is the only routine maintenance account.
+* Client confirms that hosting panel admin password and any backup storage credentials are client-controlled.
 
-This project is designed to reduce risk from routine maintenance access by making it difficult and impractical to:
+### 6.2 Step-by-step Activation
+1.  **Step 1: Disable password-based root access (already standard)**
+    * Ensure SSH daemon configuration enforces key-based root access only.
+    * Confirm that password authentication for root is disabled.
+2.  **Step 2: Rotate root SSH keys so only the client retains root**
+    * Remove any non-client SSH keys from `/root/.ssh/authorized_keys`.
+    * Add only the client-provided YubiKey SSH public keys for root.
+    * *Result:* Only the client can access root via SSH.
+3.  **Step 3: Enforce devops-only access for our team**
+    * Ensure our engineers’ YubiKey SSH keys are authorized only for the `devops` user.
+    * Confirm `devops` has no general root shell capability and is limited to `sudo` allowlist wrappers.
+4.  **Step 4: Rotate myVesta panel administrator password (client-controlled)**
+    * The myVesta admin password is client-controlled and must be rotated at launch so that only the client knows it.
+    * Client logs into the server via SSH using their root access (YubiKey).
+    * Client executes: `v-change-user-password ‘admin’ ‘new_password’`
+    * Client sets a new strong password that is not shared with us.
+    * *Note:* Root password does not need to be rotated for SSH access because root login is key-based (YubiKey).
+5.  **Step 5: Rotate backup storage credentials (client-controlled, Hetzner Storage Share)**
+    * Client changes the password and access credentials for Hetzner Storage Share used for backups.
+    * Updated credentials are stored only in client-controlled configuration locations.
+    * Our team does not receive or store those credentials.
+6.  **Step 6: Confirm restricted-access controls and audit evidence**
+    * Verify `devops` `sudo` allowlist is active.
+    * Verify wrapper-based file access restrictions are active (allowlisted read/write paths).
+    * Verify mandatory logging, session evidence, and centralized log shipping is active (Section 12).
 
-- browse `/home/*`,
-- open website files and uploads,
-- read application configs that often contain DB credentials,
-- access database contents or database backups,
-- log into a hosting panel as administrator,
-- obtain a general-purpose interactive root shell.
+---
 
-If exceptional access is ever required, it should be handled via a separate, explicitly approved procedure with a defined scope and time window (see “Exceptional access procedure”).
+## 7. No Hosting Panel Administration Access
+We do not keep or use a hosting panel administrator password.
+* We cannot log into myVesta as administrator.
+* Any panel-level administrative actions remain under client-controlled credentials.
+* Our interaction with myVesta is limited to explicitly allowlisted maintenance commands (Sections 9 and 10).
 
-## Architecture overview
+---
 
-### 1) Dedicated maintenance user
+## 8. No Database Content Access
+We do not maintain customer database credentials.
+* We do not store MySQL/MariaDB root passwords for use by our engineers.
+* We do not access application database users or passwords.
+* We do not access database backups (SQL dump files).
+* Routine maintenance does not require reading database tables or application data.
 
-Typical setup uses a dedicated Unix account:
+Additionally, the restricted access model is designed so that the `devops` user cannot access typical locations where database credentials are stored (for example WordPress configuration files under user home directories).
 
-- user: `devops`
-- purpose: OS maintenance with restricted sudo privileges
-- authentication: SSH keys (recommended: hardware-backed keys such as YubiKey OpenPGP)
-- root SSH login disabled
-- no credential sharing, individual keys per engineer
-- recommended: VPN-only access
+---
 
-### 2) Restricted privilege escalation (sudo allowlist)
+## 9. Restricted Privilege Escalation (Sudo Allowlist)
+To enforce least privilege, the `devops` user can execute only an explicit allowlist of operational commands with elevated privileges.
 
-The `devops` user can only execute an explicit allowlist of operational commands with elevated privileges.
+### Open-source implementation
+We maintain the allowlist and wrapper tooling as an open-source project available for public review:
+[https://github.com/myvesta/rootless-devops](https://github.com/myvesta/rootless-devops)
 
-Examples of allowed categories:
-
-#### Patch management
+### 9.1 Patch Management
 Allowed for OS security and stability maintenance:
-- `sudo apt update`
-- `sudo apt upgrade`
-- `sudo apt remove`
+* `apt update`
+* `apt upgrade`
+* `apt remove`
 
-Not allowed:
-- `sudo apt install` (prevents installing new tooling during routine access)
+**Not allowed:**
+* `apt install` (prevents installing new tooling outside agreed scope)
 
-#### Service control (wrapped as `devops-systemctl`)
-Allowed operations (for allowlisted services only):
-- `status`
-- `restart`
-- `reload`
-- `start`
-- `stop`
-- `enable`
-- `disable`
+**Additional restriction for `apt remove` (safety control):**
+Removal of critical security and logging components (e.g., `fail2ban`, audit tooling, SSH, logging shippers, firewall tooling) is not permitted. Any attempted removal is treated as a security event.
 
-Typical allowlisted services for hosting operations:
-- nginx, apache2, php-fpm, mariadb, exim, dovecot, fail2ban, cron, ssh
+### 9.2 Service Control (wrapped as `devops-systemctl`)
+Allowed service operations (status, restart, reload, start, stop, enable, disable) for:
+* `nginx`, `apache2`
+* `php-fpm`
+* `mariadb` (service control only, no database access)
+* `exim`, `dovecot`
+* `fail2ban`
+* `cron`
+* `ssh`
 
-#### System diagnostics (read-only)
-Allowed to diagnose performance and incidents without reading customer content:
-- `sudo top`
-- `sudo iotop`
-- `sudo iftop`
-- `sudo reboot`
+### 9.3 System Diagnostics (read-only)
+* `top` (or `htop`)
+* `du` (restricted usage)
+* `iotop`
+* `iftop`
 
-#### Hosting panel maintenance commands (optional)
-If you use a hosting panel and want to permit maintenance-only actions (not admin access), you can allow a limited list of panel maintenance commands.
+### 9.4 myVesta Maintenance Commands (custom allowlist)
+Allowed commands in `devops-override-conf`:
+* `/usr/local/vesta/bin/v-list-sys-services`
+* `/usr/local/vesta/bin/v-commander`
+* `/usr/local/vesta/bin/v-clean-garbage`
+* `/usr/local/vesta/bin/v-clear-fail2ban`
+* `/usr/local/vesta/bin/v-update-myvesta`
+* `/usr/local/vesta/bin/v-update-firewall`
 
-Example (myVesta):
-- `sudo /usr/local/bin/devops-run-allowlisted-command /usr/local/vesta/bin/v-update-myvesta`
-- `sudo /usr/local/bin/devops-run-allowlisted-command /usr/local/vesta/bin/v-clean-garbage`
+---
 
-A common pattern is to keep these in a root-owned allowlist file, for example:
-- `/usr/local/bin/devops-override-conf`
+## 10. Controlled File Access
+To support troubleshooting while preventing access to hosted content, we use wrapper commands:
+`devops-cat`, `devops-chmod`, `devops-chown`, `devops-cp`, `devops-echo`, `devops-mv`, `devops-rm`, `devops-sed`, `devops-stat`, `devops-tail`, `devops-self-update`, `devops-mcview`, `devops_mcedit`.
 
-See array format and variable names at the beginning of the file `/usr/local/bin/devops-func.sh`.
+### 10.1 Allowlisted Read and Write Paths
+**Read access:**
+* `/usr/local/vesta/data/firewall/rules.conf`
+* `/usr/local/vesta/log/`
+* `/root/vesta` (post-update-myvesta-custom-scripts)
+* `/root/myvesta` (myvesta-custom-scripts-for-disk-usage-monitoring)
+* `/root/check` (uptime-server-monitoring-system)
 
-Only `root` should be able to extend that list.
+**Write access:**
+* Identical to read paths above.
 
-### 3) Controlled file access (configuration and logs only)
+### 10.2 How Wrappers Enforce Path Restrictions
+* **Real path resolution:** Prevents `../` traversal and symlink bypass.
+* **Explicit allowlist matching:** Operations permitted only if target matches allowlist.
+* **Argument hardening:** Prevents shell injection.
+* **Deny-by-default:** Any unproven path is denied and logged.
 
-To support troubleshooting while preventing access to hosted content, wrapper commands enforce path restrictions. Even if a wrapper runs as root, it only allows operations on explicitly approved locations.
+### 10.3 General Restrictions
+This prevents routine browsing of:
+* `/home/*`
+* Web roots, application configs, uploads, media libraries.
+* Database dumps and customer backups.
 
-Wrappers commonly included:
-- `sudo devops-cat`
-- `sudo devops-chmod`
-- `sudo devops-chown`
-- `sudo devops-cp`
-- `sudo devops-echo`
-- `sudo devops-mv`
-- `sudo devops-rm`
-- `sudo devops-sed`
-- `sudo devops-stat`
-- `sudo devops-tail`
-- `sudo devops-self-update` (fetches updates from this repo)
-- `sudo devops-mcview`
-- `devops_mcedit` (partially elevated)
+### 10.4 Hardening Controls for `/etc` Access
+If `/etc` is allowlisted, the following sensitive paths remain **explicitly denied**:
+* `/etc/sudoers` and `/etc/sudoers.d/*`
+* `/etc/ssh/*`
+* `/etc/systemd/*`
+* `/etc/cron*`
+* `/etc/passwd`, `/etc/shadow`, `/etc/group`, `/etc/gshadow`
 
-Allowed file locations (typical):
-- `/etc/`
-- `/var/log/`
+---
 
-Key protections:
-- block path traversal (`../`)
-- resolve real paths and ensure they remain inside allowed directories (symlink bypass prevention)
+## 11. What We Explicitly Cannot Do
+* Browse `/home` directories.
+* Open website files or application configs in user homes.
+* Retrieve database credentials.
+* Log into myVesta as admin.
+* Access database contents or generate SQL dumps.
+* General-purpose root shell.
 
-This enables access to:
-- system configuration (for service operation)
-- system logs (for auditing and troubleshooting)
+---
 
-while blocking browsing of:
-- `/home/*`
-- web roots under user directories
-- application content directories
-- backups and archives outside `/var/log`
+## 12. Logging, Session Evidence, and Audit Trail (Mandatory)
 
-#### Hardening controls for `/etc`
-Allowing full edits under `/etc` is too broad because it contains security-sensitive files. To preserve the restricted-access model, deny edits to sensitive paths such as:
-- `/etc/sudoers`, `/etc/sudoers.d/*`
-- `/etc/ssh/*`
-- `/etc/systemd/*`
-- `/etc/cron*`
-- `/etc/passwd`, `/etc/shadow`, `/etc/group`, `/etc/gshadow`
+### 12.1 Visibility
+* `/var/log/auth.log` (SSH logins, sudo usage).
 
-This avoids trivial privilege recovery by changing sudo rules, startup units, or SSH access.
+### 12.2 Mandatory sudo I/O logging
+Provides auditable evidence of what was executed and produced.
 
-## Logging and auditability
+### 12.3 Mandatory Centralized Log Shipping
+Logs are shipped to a client-controlled remote location to prevent local alteration.
 
-All authentication and sudo actions should be logged and reviewable.
+### 12.4 Full SSH Session Recording
+Available upon client request and provider approval for specific sessions.
 
-Typical audit sources:
-- `/var/log/auth.log` (SSH logins, sudo usage)
-- sudo logs (depending on configuration)
-- service logs under `/var/log/*`
+---
 
-Optional enhancements:
-- sudo I/O logging (session recording for allowed commands)
-- centralized log shipping to the client SIEM/log platform
+## 13. Residual Risk Note for Logs Containing Personal Data
 
-## Backup access limitations (recommended)
+### 13.1 Assessment
+`/usr/local/vesta/log/` can contain IP addresses or email addresses related to security events.
 
-If you use backups that may contain customer content:
+### 13.2 Control and Minimization
+Access is restricted to this narrow path for troubleshooting only, and all access is auditable.
 
-- the maintenance user should not have permission to browse or read backup repositories/data sets
-- backup operations (creation, verification, retention, cleanup) should run via automated scripts/cron jobs
-- restore actions should be performed via hosting panel or automation, only on explicit client request/approval
-- any privileged backup-related actions should be logged the same way as other sudo-controlled operations
+---
 
-## Exceptional access procedure (recommended)
+## 14. Backups (Access Limitations)
 
-Sometimes a serious incident cannot be resolved with the restricted model alone. If that happens:
+### 14.1 Standard Rule (no routine access)
+* `devops` account cannot browse or read backup repositories.
+* Backups handled via automated scheduled jobs.
 
-- treat it as a separate procedure
-- define scope, time window, and explicit approval
-- log all actions
-- revert to restricted mode immediately after completion
+### 14.3 Break-glass Backup Restore
+Performed under client supervision (e.g., AnyDesk) without sharing credentials with our team.
 
-Do not normalize “temporary root” as part of routine maintenance.
+---
 
-## Configuration concepts
+## 15. Emergency Procedures (Break-glass)
+* **Rule:** Requires client approval, clear scope, and time window.
+* **Post-incident review:** Mandatory review covering reason, actions, and evidence.
+* **Commercial note:** Written reports are billed per working hour: [https://www.mycity-hosting.rs/cenovnik-pojedinacnih-usluga/](https://www.mycity-hosting.rs/cenovnik-pojedinacnih-usluga/)
 
-### Allowlisted commands
-Define exactly what `devops` may run with sudo. Keep it minimal and review changes like code.
+---
 
-### Allowlisted paths
-Wrappers must validate the target path:
-- must be within allowed roots (`/etc`, `/var/log`)
-- must not escape via `../`
-- must pass realpath checks to prevent symlink tricks
+## 16. SSH Session Controls
+* **Timeouts:** SSH idle timeouts are supported.
+* **Key rotation:** Engineers rotate hardware keys internally; server-side rotation on client request (billed service).
 
-### Allowlisted services
-`sudo devops-systemctl` should only accept known service names. Everything else should be rejected.
+---
 
-## Usage examples (typical)
+## 17. Change Management
+* **Routine:** OS security updates performed in maintenance window.
+* **Non-routine:** Client notification and approval required.
 
-- Check service status:
-  - `sudo devops-systemctl status nginx`
-- Restart a service:
-  - `sudo devops-systemctl restart php-fpm`
-- View logs:
-  - `sudo devops-tail -f /var/log/nginx/error.log`
-- Copy files:
-  - `sudo devops-cp /etc/fstab /etc/fstab.backup`
-- View config file (if allowed):
-  - `sudo devops-cat /etc/nginx/nginx.conf`
-  - `sudo devops-mcview /etc/nginx/nginx.conf`
-- Edit config file (if allowed):
-  - `devops_mcedit /etc/nginx/nginx.conf` (the only devops command without `sudo`)
-- Update system software (allowed subset):
-  - `sudo apt update`
-  - `sudo apt upgrade`
+---
 
-## Security notes
+## 18. Periodic Review of Allowlists
+Quarterly review of all allowed commands, paths, and services. Any change requires client approval.
 
-- This is a “reduce practical access” model, not a cryptographic guarantee.
-- You should still apply standard hardening: firewalling, MFA/VPN, timely updates, least privilege everywhere, monitoring, and incident response.
-- Review allowlists periodically and treat changes as security-sensitive.
-- Prefer immutable logs and centralized audit where possible.
+---
 
-## GDPR alignment (operational summary)
+## 19. Summary for GDPR Alignment
+These measures implement:
+* Access control and least privilege.
+* Data minimization.
+* Accountability through logging.
+* Segregation of duties.
 
-These measures support expectations around:
-- access control and least privilege
-- data minimization
-- confidentiality and integrity
-- accountability through logging
+---
 
-Operationally:
-- infrastructure maintenance is possible
-- access to customer content and database contents is not required, and is restricted by design
+## Appendix A. Authoritative Allowlist Excerpt
+*(Refer to Section 9.4 and 10.1 for current allowlisted commands and paths.)*
 
-## Contributing
-
-Contributions are welcome, especially:
-- hardening improvements to path validation
-- additional safe wrappers (with strict guardrails)
-- documentation and test cases
-- service allowlist patterns for common Debian/Ubuntu hosting stacks
-
-Please open an issue or PR with:
-- what problem you are solving
-- threat/abuse cases considered
-- how you tested it
-
-## License
-
-[GPL v3 license](https://github.com/myvesta/rootless-devops/blob/main/LICENSE)
-
-## Disclaimer
-
-This project helps enforce a restricted maintenance model, but no tooling can replace proper governance, approvals, and security reviews. Always validate that the configuration matches your legal, compliance, and operational requirements.
+## Appendix B. Recommended Audit Evidence Set (Minimum)
+* `/var/log/auth.log` extracts.
+* `sudo` logs and `sudo I/O` records.
+* Evidence of centralized log shipping destination.
+* Copy of active `devops-override-conf`.
+* Reference to `rootless-devops` version used.
