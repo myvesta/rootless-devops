@@ -107,9 +107,8 @@ This section describes the steps to activate the restricted-access model. This p
 4.  **Step 4: Rotate myVesta panel administrator password (client-controlled)**
     * The myVesta admin password is client-controlled and must be rotated at launch so that only the client knows it.
     * Client logs into the server via SSH using their root access (YubiKey).
-    * Client executes: `v-change-user-password ‘admin’ ‘new_password’`
+    * Client executes: `v-change-user-password 'admin' 'new_password'`
     * Client sets a new strong password that is not shared with us.
-    * *Note:* Root password does not need to be rotated for SSH access because root login is key-based (YubiKey).
 5.  **Step 5: Rotate backup storage credentials (client-controlled, Hetzner Storage Share)**
     * Client changes the password and access credentials for Hetzner Storage Share used for backups.
     * Updated credentials are stored only in client-controlled configuration locations.
@@ -141,11 +140,10 @@ Additionally, the restricted access model is designed so that the `devops` user 
 ---
 
 ## 9. Restricted Privilege Escalation (Sudo Allowlist)
-To enforce least privilege, the `devops` user can execute only an explicit allowlist of operational commands with elevated privileges.
 
 ### Open-source implementation
 We maintain the allowlist and wrapper tooling as an open-source project available for public review:
-[https://github.com/myvesta/rootless-devops](https://github.com/myvesta/rootless-devops)
+https://github.com/myvesta/rootless-devops
 
 ### 9.1 Patch Management
 Allowed for OS security and stability maintenance:
@@ -154,161 +152,207 @@ Allowed for OS security and stability maintenance:
 * `apt remove`
 
 **Not allowed:**
-* `apt install` (prevents installing new tooling outside agreed scope)
+* `apt install`
 
 **Additional restriction for `apt remove` (safety control):**
-Removal of critical security and logging components (e.g., `fail2ban`, audit tooling, SSH, logging shippers, firewall tooling) is not permitted. Any attempted removal is treated as a security event.
+Removal of critical security and logging components is not permitted and is treated as a security event.
+
+---
 
 ### 9.2 Service Control (wrapped as `devops-systemctl`)
-Allowed service operations (status, restart, reload, start, stop, enable, disable) for:
+Allowed service operations for:
 * `nginx`, `apache2`
 * `php-fpm`
-* `mariadb` (service control only, no database access)
+* `mariadb`
 * `exim`, `dovecot`
 * `fail2ban`
 * `cron`
 * `ssh`
 
+---
+
 ### 9.3 System Diagnostics (read-only)
-* `top` (or `htop`)
-* `du` (restricted usage)
+* `top`
+* `du`
 * `iotop`
 * `iftop`
 
+---
+
 ### 9.4 myVesta Maintenance Commands (custom allowlist)
-Allowed commands in `devops-override-conf`:
-* `/usr/local/vesta/bin/v-list-sys-services`
-* `/usr/local/vesta/bin/v-commander`
-* `/usr/local/vesta/bin/v-clean-garbage`
-* `/usr/local/vesta/bin/v-clear-fail2ban`
-* `/usr/local/vesta/bin/v-update-myvesta`
-* `/usr/local/vesta/bin/v-update-firewall`
+
+#### v-commander
+Used strictly for infrastructure and service maintenance.
+
+Capabilities include:
+* Service status checks
+* Restart/reload of services
+* Updating service configurations (web server, fail2ban filters, WAF rules)
+* Updating SpamAssassin rules
+* Validating server configuration (e.g., Apache MPM mode)
+
+**Restrictions:**
+* Does not list users, websites, or email accounts
+* Does not expose customer-related data
+* Does not read or access files under `/home`
+* Does not interact with application-level data
+
+---
+
+#### v-clean-garbage
+Used for disk space maintenance and cleanup.
+
+Capabilities include:
+* Removal or truncation of unnecessary `*.log` files
+* Cleanup of cache directories (e.g., `/wp-content/cache/`)
+* Disk space reclamation
+
+**Restrictions:**
+* Does not read file contents
+* Does not list or expose file names
+* Produces only aggregated output (e.g., freed disk space)
+* No ability to extract or inspect customer data
+
+**Note:**  
+This command may operate on paths under `/home`, but only in a non-inspecting, non-reading manner for cleanup purposes.
+
+---
+
+#### devops-self-update
+Used to update wrapper scripts enforcing access restrictions.
+
+**Control model:**
+* Can be disabled entirely if required by the client
+* Can be restricted to manual execution under client-controlled root session
+* Can be configured to pull from a client-controlled fork instead of the upstream repository
+
+**Transparency:**
+* All changes are publicly visible via version control history
+* No hidden or automatic background updates are performed
 
 ---
 
 ## 10. Controlled File Access
+
 To support troubleshooting while preventing access to hosted content, we use wrapper commands:
 `devops-cat`, `devops-chmod`, `devops-chown`, `devops-cp`, `devops-echo`, `devops-mv`, `devops-rm`, `devops-sed`, `devops-stat`, `devops-tail`, `devops-self-update`, `devops-mcview`, `devops_mcedit`.
 
-### 10.1 Allowlisted Read and Write Paths
-**Read access:**
-* `/usr/local/vesta/data/firewall/rules.conf`
-* `/usr/local/vesta/log/`
-* `/root/vesta` (post-update-myvesta-custom-scripts)
-* `/root/myvesta` (myvesta-custom-scripts-for-disk-usage-monitoring)
-* `/root/check` (uptime-server-monitoring-system)
-
-**Write access:**
-* Identical to read paths above.
-
-### 10.2 How Wrappers Enforce Path Restrictions
-* **Real path resolution:** Prevents `../` traversal and symlink bypass.
-* **Explicit allowlist matching:** Operations permitted only if target matches allowlist.
-* **Argument hardening:** Prevents shell injection.
-* **Deny-by-default:** Any unproven path is denied and logged.
-
-### 10.3 General Restrictions
-This prevents routine browsing of:
-* `/home/*`
-* Web roots, application configs, uploads, media libraries.
-* Database dumps and customer backups.
-
-### 10.4 Hardening Controls for `/etc` Access
-If `/etc` is allowlisted, the following sensitive paths remain **explicitly denied**:
-* `/etc/sudoers` and `/etc/sudoers.d/*`
-* `/etc/ssh/*`
-* `/etc/systemd/*`
-* `/etc/cron*`
-* `/etc/passwd`, `/etc/shadow`, `/etc/group`, `/etc/gshadow`
-
 ---
 
-## 11. What We Explicitly Cannot Do
-* Browse `/home` directories.
-* Open website files or application configs in user homes.
-* Retrieve database credentials.
-* Log into myVesta as admin.
-* Access database contents or generate SQL dumps.
-* General-purpose root shell.
+### 10.3 devops_mcedit (partially elevated editing)
+
+This command enables controlled editing of system configuration files.
+
+**How it works:**
+1. File is validated against allowlisted paths
+2. File is copied to a temporary location (`/tmp`)
+3. Editing is performed as a non-privileged `devops` user
+4. Modified file is copied back with elevated privileges
+
+**Security properties:**
+* The editor itself runs without privileges
+* No access to arbitrary files via editor menus
+* No ability to escape into restricted paths
+* Only allowlisted files can be modified
 
 ---
 
 ## 12. Logging, Session Evidence, and Audit Trail (Mandatory)
 
 ### 12.1 Visibility
-* `/var/log/auth.log` (SSH logins, sudo usage).
+* `/var/log/auth.log`
 
 ### 12.2 Mandatory sudo I/O logging
-Provides auditable evidence of what was executed and produced.
 
 ### 12.3 Mandatory Centralized Log Shipping
-Logs are shipped to a client-controlled remote location to prevent local alteration.
 
 ### 12.4 Full SSH Session Recording
-Available upon client request and provider approval for specific sessions.
 
 ---
 
-## 13. Residual Risk Note for Logs Containing Personal Data
+## 13. Log Access and Retention Policy
 
-### 13.1 Assessment
-`/usr/local/vesta/log/` can contain IP addresses or email addresses related to security events.
+### 13.1 Purpose
+Access to `/usr/local/vesta/log/` is a necessary security control used for:
+* Detection of brute-force attacks
+* Detection of unauthorized access attempts
+* Incident response and forensic analysis
 
-### 13.2 Control and Minimization
-Access is restricted to this narrow path for troubleshooting only, and all access is auditable.
+This access is not considered application-level data processing, but a required infrastructure security function.
+
+### 13.2 Data Characteristics
+Logs may contain:
+* IP addresses
+* Email addresses (from authentication events)
+
+These are inherent to security monitoring.
+
+### 13.3 Retention Policy
+* Logs are automatically rotated and retained for a limited period (e.g., 7 days)
+* Older logs are automatically removed
+* Retention period can be adjusted based on client requirements
+
+### 13.4 Access Control
+* Access is restricted to allowlisted paths only
+* All access is logged and auditable
 
 ---
 
 ## 14. Backups (Access Limitations)
 
 ### 14.1 Standard Rule (no routine access)
-* `devops` account cannot browse or read backup repositories.
-* Backups handled via automated scheduled jobs.
+* `devops` account cannot browse or read backup repositories
+* Backups handled via automated scheduled jobs
 
 ### 14.3 Break-glass Backup Restore
-Performed under client supervision (e.g., AnyDesk) without sharing credentials with our team.
+Performed under client supervision without sharing credentials
 
 ---
 
 ## 15. Emergency Procedures (Break-glass)
-* **Rule:** Requires client approval, clear scope, and time window.
-* **Post-incident review:** Mandatory review covering reason, actions, and evidence.
-* **Commercial note:** Written reports are billed per working hour: [https://www.mycity-hosting.rs/cenovnik-pojedinacnih-usluga/](https://www.mycity-hosting.rs/cenovnik-pojedinacnih-usluga/)
+
+* Requires client approval and defined scope
+* All actions are logged and reviewed post-incident
 
 ---
 
 ## 16. SSH Session Controls
-* **Timeouts:** SSH idle timeouts are supported.
-* **Key rotation:** Engineers rotate hardware keys internally; server-side rotation on client request (billed service).
+* SSH idle timeouts supported
+* Key rotation supported
 
 ---
 
 ## 17. Change Management
-* **Routine:** OS security updates performed in maintenance window.
-* **Non-routine:** Client notification and approval required.
+* Routine updates in maintenance window
+* Non-routine requires approval
 
 ---
 
 ## 18. Periodic Review of Allowlists
-Quarterly review of all allowed commands, paths, and services. Any change requires client approval.
+Quarterly review with client approval
 
 ---
 
-## 19. Summary for GDPR Alignment
+## 19. Commercial and engagement model
+
+All activities described in this document represent controlled, security-oriented maintenance work outside standard unmanaged hosting.
+
+**Standard engagement:**
+* Working hours: Monday to Friday, 09:00 to 17:00
+* Rate: 50 EUR per working hour
+
+**Extended engagement (upon request and approval):**
+* Outside working hours and weekends
+* Subject to availability and explicit approval
+* Rate: 150 EUR per working hour
+
+---
+
+## 20. Summary for GDPR Alignment
 These measures implement:
-* Access control and least privilege.
-* Data minimization.
-* Accountability through logging.
-* Segregation of duties.
+* Access control and least privilege
+* Data minimization
+* Accountability through logging
+* Segregation of duties
 
 ---
-
-## Appendix A. Authoritative Allowlist Excerpt
-*(Refer to Section 9.4 and 10.1 for current allowlisted commands and paths.)*
-
-## Appendix B. Recommended Audit Evidence Set (Minimum)
-* `/var/log/auth.log` extracts.
-* `sudo` logs and `sudo I/O` records.
-* Evidence of centralized log shipping destination.
-* Copy of active `devops-override-conf`.
-* Reference to `rootless-devops` version used.
