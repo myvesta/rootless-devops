@@ -63,6 +63,7 @@ This document applies to:
 ### 4.4 Auditability
 * Privileged actions are executed via `sudo` with logging.
 * Authentication events and `sudo` events are available for review and audit evidence.
+* Denied access attempts are explicitly logged via devops wrapper logging (Section 12.5).
 
 ---
 
@@ -149,13 +150,10 @@ https://github.com/myvesta/rootless-devops
 Allowed for OS security and stability maintenance:
 * `apt update`
 * `apt upgrade`
-* `apt remove`
 
 **Not allowed:**
 * `apt install`
-
-**Additional restriction for `apt remove` (safety control):**
-Removal of critical security and logging components is not permitted and is treated as a security event.
+* `apt remove`
 
 ---
 
@@ -267,6 +265,29 @@ This command enables controlled editing of system configuration files.
 ### 12.3 Mandatory Centralized Log Shipping
 
 ### 12.4 Full SSH Session Recording
+
+### 12.5 Denied access logging (devops allowlist enforcement)
+
+All denied access attempts triggered by devops wrapper commands are logged to a dedicated log file:
+
+/var/log/devops-denied-access.log
+
+This includes:
+* Attempts to access non-allowlisted file paths
+* Attempts to execute non-allowlisted commands
+* Any rejected operation enforced by wrapper scripts
+
+Purpose:
+* Provides audit evidence of enforced access restrictions
+* Demonstrates that data access controls are actively preventing unauthorized actions
+* Supports incident investigation and compliance audits
+
+Access control:
+* Log file is readable only by root
+* Entries are append-only and cannot be modified by the devops user
+
+Note:
+This log complements standard system logs (e.g. /var/log/auth.log and sudo logs) by providing visibility into blocked actions, not only successful ones.
 
 ---
 
