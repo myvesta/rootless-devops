@@ -29,6 +29,8 @@ banned_paths=(
     "/etc/systemd/"
     "/lib/systemd"
     "/etc/cron"
+    "/backup/"
+    "/var/spool/cron/" 
 )
 
 allowed_commands_for_privilege_escalation=(
