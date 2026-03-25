@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -f "/usr/local/bin/devops-self-update-blocked" ]; then
+    /usr/local/bin/devops-log-denied-access "execute" "$0 $@"
+    echo "== Devops self update is blocked"
+    exit 1
+fi
+
 wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /home/devops/install-rootless-devops.sh
 bash /home/devops/install-rootless-devops.sh
 rm /home/devops/install-rootless-devops.sh

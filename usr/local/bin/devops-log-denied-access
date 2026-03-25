@@ -1,0 +1,17 @@
+#!/bin/bash
+
+number_of_arguments=$#
+if [ $number_of_arguments -ne 2 ]; then
+    echo "ERROR: Invalid number of arguments"
+    echo "Usage:   sudo devops-log-denied-access <mode> <command>"
+    echo "Example: sudo devops-log-denied-access read devops-cp /etc/test.txt"
+    exit 1
+fi
+
+if [ ! -f "/var/log/devops-denied-access.log" ]; then
+    touch /var/log/devops-denied-access.log
+    chown root:root /var/log/devops-denied-access.log
+    chmod 0600 /var/log/devops-denied-access.log
+fi
+
+echo "$(date +'%Y-%m-%d %H:%M:%S') $1 $2" >> /var/log/devops-denied-access.log

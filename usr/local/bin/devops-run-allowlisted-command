@@ -2,7 +2,12 @@
 
 source /usr/local/bin/devops-func.sh
 
+    #for cmd in "${allowed_commands_for_privilege_escalation[@]}"; do
+    #    echo "$cmd"
+    #done
+
 for command in "${allowed_commands_for_privilege_escalation[@]}"; do
+    echo "command: $command"
     if [ "$1" == "$command" ]; then
         "$@"
         exit $?
@@ -11,4 +16,5 @@ done
 
 echo "ERROR: Command not allowed: $1"
 echo "Allowed commands for privilege escalation: ${allowed_commands_for_privilege_escalation[@]}"
+/usr/local/bin/devops-log-denied-access "execute" "$0 $@"
 exit 1

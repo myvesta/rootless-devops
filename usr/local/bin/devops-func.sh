@@ -1,5 +1,7 @@
 #!/bin/bash
 
+devops_debug_buffer=""
+
 allowed_paths_for_read=(
     "/etc/"
     "/var/log/"
@@ -8,7 +10,6 @@ allowed_paths_for_read=(
 
 allowed_paths_for_write=(
     "/etc/"
-    "/var/log/"
     "/tmp/"
 )
 
@@ -33,11 +34,13 @@ banned_paths=(
 allowed_commands_for_privilege_escalation=(
 )
 
-conf_owner=$(stat -c "%U" /usr/local/bin/devops-override-conf)
-conf_group=$(stat -c "%G" /usr/local/bin/devops-override-conf)
-conf_mode=$(stat -c "%a" /usr/local/bin/devops-override-conf)
-if [ "$conf_owner" = "root" ] && [ "$conf_group" = "root" ] && [ "$conf_mode" = "644" ]; then
-    source /usr/local/bin/devops-override-conf
+if [ -f "/usr/local/bin/devops-override-conf" ]; then
+    conf_owner=$(stat -c "%U" /usr/local/bin/devops-override-conf)
+    conf_group=$(stat -c "%G" /usr/local/bin/devops-override-conf)
+    conf_mode=$(stat -c "%a" /usr/local/bin/devops-override-conf)
+    if [ "$conf_owner" = "root" ] && [ "$conf_group" = "root" ] && [ "$conf_mode" = "644" ]; then
+        source /usr/local/bin/devops-override-conf
+    fi
 fi
 
 startup_checks() {
@@ -51,15 +54,26 @@ startup_checks() {
 
     if [ "$1" == "read" ]; then
         if [ ! -f "$2" ] && [ ! -d "$2" ]; then
+            echo_debug_buffer
             echo "Path not found: $2"
+            /usr/local/bin/devops-log-denied-access "not_found" "$0 $@"
             exit 1
         fi
     fi
 }
 
+echo_debug_buffer() {
+    if [ ! -z "$devops_debug_buffer" ]; then
+        echo -e "$devops_debug_buffer"
+        devops_debug_buffer=""
+    fi
+}
+
 check_for_common_traversal_attempts() {
     if [[ "$1" == *"../"* || "$1" == *"~/"* || "$1" == *" "* ]]; then
+        echo_debug_buffer
         echo "Path not allowed (common traversal attempt): $1"
+        /usr/local/bin/devops-log-denied-access "traversal" "$0 $@"
         exit 1
     fi
 }
@@ -67,13 +81,32 @@ check_for_common_traversal_attempts() {
 check_for_banned_paths() {
     for path in "${banned_paths[@]}"; do
         if [[ "$1" == "$path"* ]]; then
+            echo_debug_buffer
             echo "Path not allowed (banned path): $1"
+            /usr/local/bin/devops-log-denied-access "banned" "$0 $@"
             exit 1
         fi
     done
 }
 
+check_for_symlink_for_read() {
+    if [ -L "$1" ]; then
+        target=$(readlink -f "$1")
+        devops_debug_buffer+="Path is a symlink: $1 -> $target\n"
+        is_allowed_path_for_read "$target"
+    fi
+}
+
+check_for_symlink_for_write() {
+    if [ -L "$1" ]; then
+        target=$(readlink -f "$1")
+        devops_debug_buffer+="Path is a symlink: $1 -> $target\n"
+        is_allowed_path_for_write "$target"
+    fi
+}
+
 is_allowed_path_for_read() {
+    check_for_symlink_for_read "$1"
     check_for_common_traversal_attempts "$1"
     check_for_banned_paths "$1"
     for path in "${allowed_paths_for_read[@]}"; do
@@ -81,11 +114,14 @@ is_allowed_path_for_read() {
             return 0
         fi
     done
+    echo_debug_buffer
     echo "Path not allowed for read: $1"
+    /usr/local/bin/devops-log-denied-access "read" "$0 $@"
     exit 1
 }
 
 is_allowed_path_for_write() {
+    check_for_symlink_for_write "$1"
     check_for_common_traversal_attempts "$1"
     check_for_banned_paths "$1"
     for path in "${allowed_paths_for_write[@]}"; do
@@ -93,7 +129,9 @@ is_allowed_path_for_write() {
             return 0
         fi
     done
+    echo_debug_buffer
     echo "Path not allowed for write: $1"
+    /usr/local/bin/devops-log-denied-access "write" "$0 $@"
     exit 1
 }
 

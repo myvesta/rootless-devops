@@ -1,0 +1,8 @@
+#!/bin/bash
+
+touch /usr/local/bin/devops-self-update-blocked
+chown root:root /usr/local/bin/devops-self-update-blocked
+chmod 0644 /usr/local/bin/devops-self-update-blocked
+
+echo "== Devops self update blocked"
+exit 0

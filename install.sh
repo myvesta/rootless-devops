@@ -24,6 +24,16 @@ cp -r usr/local/bin/* /usr/local/bin/
 chmod +x /usr/local/bin/devops-*
 chmod -x /usr/local/bin/devops-func.sh
 
-touch /usr/local/bin/devops-override-conf
-chown root:root /usr/local/bin/devops-override-conf
-chmod 0644 /usr/local/bin/devops-override-conf
+if [ -f "/usr/local/bin/devops-override-conf" ]; then
+    chown root:root /usr/local/bin/devops-override-conf
+    chmod 0644 /usr/local/bin/devops-override-conf
+fi
+
+if [ -f "/usr/local/bin/devops-self-update-blocked" ]; then
+    chown root:root /usr/local/bin/devops-self-update-blocked
+    chmod 0644 /usr/local/bin/devops-self-update-blocked
+fi
+
+touch /var/log/devops-denied-access.log
+chown root:root /var/log/devops-denied-access.log
+chmod 0600 /var/log/devops-denied-access.log
