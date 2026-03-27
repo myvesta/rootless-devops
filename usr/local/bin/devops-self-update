@@ -6,6 +6,46 @@ if [ -f "/usr/local/bin/devops-self-update-blocked" ]; then
     exit 1
 fi
 
-wget -nv https://raw.githubusercontent.com/myvesta/rootless-devops/refs/heads/main/install.sh -O /home/devops/install-rootless-devops.sh
-bash /home/devops/install-rootless-devops.sh
-rm /home/devops/install-rootless-devops.sh
+cd /home/devops
+
+echo "== Starting devops self update"
+
+repo_url="https://github.com/myvesta/rootless-devops.git"
+if [ -f "/usr/local/bin/devops-repo-url" ]; then
+    repo_url_owner=$(stat -c "%U" /usr/local/bin/devops-repo-url)
+    repo_url_group=$(stat -c "%G" /usr/local/bin/devops-repo-url)
+    repo_url_mode=$(stat -c "%a" /usr/local/bin/devops-repo-url)
+    if [ "$repo_url_owner" = "root" ] && [ "$repo_url_group" = "root" ] && [ "$repo_url_mode" = "600" ]; then
+        repo_url=$(cat /usr/local/bin/devops-repo-url)
+        echo "= Using configured repository URL: $repo_url"
+    fi
+fi
+
+repo_folder_name="rootless-devops"
+if [ -f "/usr/local/bin/devops-repo-folder-name" ]; then
+    repo_folder_name_owner=$(stat -c "%U" /usr/local/bin/devops-repo-folder-name)
+    repo_folder_name_group=$(stat -c "%G" /usr/local/bin/devops-repo-folder-name)
+    repo_folder_name_mode=$(stat -c "%a" /usr/local/bin/devops-repo-folder-name)
+    if [ "$repo_folder_name_owner" = "root" ] && [ "$repo_folder_name_group" = "root" ] && [ "$repo_folder_name_mode" = "600" ]; then
+        repo_folder_name=$(cat /usr/local/bin/devops-repo-folder-name)
+        echo "= Using configured repository folder name: $repo_folder_name"
+    fi
+fi
+
+if [ -d "$repo_folder_name" ]; then
+    rm -rf $repo_folder_name
+fi
+
+git clone $repo_url
+
+cd $repo_folder_name
+
+source install-hooks/update-pre.sh
+
+source install-hooks/setup-files.sh
+
+source install-hooks/update-post.sh
+
+echo "== Devops self update completed"
+
+exit 0

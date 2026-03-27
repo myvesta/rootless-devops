@@ -1,0 +1,33 @@
+#!/bin/bash
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "ERROR: You must be root to run this script"
+    exit 1
+fi
+
+repo_url="$1"
+if [ -z "$repo_url" ]; then
+    echo "ERROR: Repository URL is required as first argument."
+    echo "Example: sudo devops_set_repo_url https://github.com/myvesta/rootless-devops.git rootless-devops"
+    exit 1
+fi
+
+repo_folder_name="$2"
+if [ -z "$repo_folder_name" ]; then
+    echo "ERROR: Repository folder name is required as second argument"
+    echo "Example: sudo devops_set_repo_url https://github.com/myvesta/rootless-devops.git rootless-devops"
+    exit 1
+fi
+
+echo "$repo_url" > /usr/local/bin/devops-repo-url
+chmod 0600 /usr/local/bin/devops-repo-url
+chown root:root /usr/local/bin/devops-repo-url
+echo "= Repository URL set to: $repo_url"
+
+echo "$repo_folder_name" > /usr/local/bin/devops-repo-folder-name
+chmod 0600 /usr/local/bin/devops-repo-folder-name
+chown root:root /usr/local/bin/devops-repo-folder-name
+echo "= Repository folder name set to: $repo_folder_name"
+
+exit 0

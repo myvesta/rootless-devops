@@ -11,46 +11,45 @@ if ! id "devops" &>/dev/null; then
 fi
 
 cd /home/devops
-if [ -d "rootless-devops" ]; then
-    rm -rf rootless-devops
-fi
+
+echo "== Installing rootless-devops software"
 
 repo_url="https://github.com/myvesta/rootless-devops.git"
 if [ -f "/usr/local/bin/devops-repo-url" ]; then
     repo_url_owner=$(stat -c "%U" /usr/local/bin/devops-repo-url)
     repo_url_group=$(stat -c "%G" /usr/local/bin/devops-repo-url)
     repo_url_mode=$(stat -c "%a" /usr/local/bin/devops-repo-url)
-    if [ "$repo_url_owner" = "root" ] && [ "$repo_url_group" = "root" ] && [ "$repo_url_mode" = "644" ]; then
+    if [ "$repo_url_owner" = "root" ] && [ "$repo_url_group" = "root" ] && [ "$repo_url_mode" = "600" ]; then
         repo_url=$(cat /usr/local/bin/devops-repo-url)
+        echo "= Using configured repository URL: $repo_url"
     fi
 fi
 
+repo_folder_name="rootless-devops"
+if [ -f "/usr/local/bin/devops-repo-folder-name" ]; then
+    repo_folder_name_owner=$(stat -c "%U" /usr/local/bin/devops-repo-folder-name)
+    repo_folder_name_group=$(stat -c "%G" /usr/local/bin/devops-repo-folder-name)
+    repo_folder_name_mode=$(stat -c "%a" /usr/local/bin/devops-repo-folder-name)
+    if [ "$repo_folder_name_owner" = "root" ] && [ "$repo_folder_name_group" = "root" ] && [ "$repo_folder_name_mode" = "600" ]; then
+        repo_folder_name=$(cat /usr/local/bin/devops-repo-folder-name)
+        echo "= Using configured repository folder name: $repo_folder_name"
+    fi
+fi
+
+if [ -d "$repo_folder_name" ]; then
+    rm -rf $repo_folder_name
+fi
+
 git clone $repo_url
-cd rootless-devops
 
-cp -r etc/* /etc/
-chmod 440 /etc/sudoers.d/devops
+cd $repo_folder_name
 
-cp -r usr/local/bin/* /usr/local/bin/
-chmod +x /usr/local/bin/devops-*
-chmod +x /usr/local/bin/devops_*
-chmod -x /usr/local/bin/devops-func.sh
+source install-hooks/install-pre.sh
 
-if [ -f "/usr/local/bin/devops-override-conf" ]; then
-    chown root:root /usr/local/bin/devops-override-conf
-    chmod 0644 /usr/local/bin/devops-override-conf
-fi
+source install-hooks/setup-files.sh
 
-if [ -f "/usr/local/bin/devops-self-update-blocked" ]; then
-    chown root:root /usr/local/bin/devops-self-update-blocked
-    chmod 0644 /usr/local/bin/devops-self-update-blocked
-fi
+source install-hooks/install-post.sh
 
-if [ -f "/usr/local/bin/devops-repo-url" ]; then
-    chown root:root /usr/local/bin/devops-repo-url
-    chmod 0644 /usr/local/bin/devops-repo-url
-fi
+echo "== Rootless-devops software installed"
 
-touch /var/log/devops-denied-access.log
-chown root:root /var/log/devops-denied-access.log
-chmod 0600 /var/log/devops-denied-access.log
+exit 0
