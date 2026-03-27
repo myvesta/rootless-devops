@@ -33,6 +33,7 @@ chmod 440 /etc/sudoers.d/devops
 
 cp -r usr/local/bin/* /usr/local/bin/
 chmod +x /usr/local/bin/devops-*
+chmod +x /usr/local/bin/devops_*
 chmod -x /usr/local/bin/devops-func.sh
 
 if [ -f "/usr/local/bin/devops-override-conf" ]; then
