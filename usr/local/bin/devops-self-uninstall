@@ -1,0 +1,11 @@
+#!/bin/bash
+
+rm /usr/local/bin/devops-*
+rm /usr/local/bin/devops_*
+rm -rf /home/devops
+rm /etc/sudoers.d/devops
+userdel devops
+
+echo "== Devops self uninstall completed"
+
+exit 0
