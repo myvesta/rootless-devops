@@ -40,11 +40,11 @@ git clone $repo_url
 
 cd $repo_folder_name
 
-source install-hooks/update-pre.sh
+source hooks/update-pre.sh
 
-source install-hooks/setup-files.sh
+source hooks/setup-files.sh
 
-source install-hooks/update-post.sh
+source hooks/update-post.sh
 
 echo "== Devops self update completed"
 

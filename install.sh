@@ -44,11 +44,11 @@ git clone $repo_url
 
 cd $repo_folder_name
 
-source install-hooks/install-pre.sh
+source hooks/install-pre.sh
 
-source install-hooks/setup-files.sh
+source hooks/setup-files.sh
 
-source install-hooks/install-post.sh
+source hooks/install-post.sh
 
 echo "== Rootless-devops software installed"
 

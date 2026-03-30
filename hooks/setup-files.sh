@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -d "install-hooks" ]; then
+if [ ! -d "hooks" ]; then
     echo "ERROR: I'm not in the rootless-devops repository folder"
     exit 1
 fi
