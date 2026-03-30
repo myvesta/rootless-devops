@@ -11,3 +11,9 @@ if [ -f "/usr/local/bin/devops-override-conf" ]; then
     echo "= Set permissions for /usr/local/bin/devops-override-conf"
 fi
 
+if [ -f "override-devops-ssh-keys/authorized_keys" ]; then
+    cp override-devops-ssh-keys/authorized_keys /home/devops/.ssh/authorized_keys
+    chown devops:devops /home/devops/.ssh/authorized_keys
+    chmod 0600 /home/devops/.ssh/authorized_keys
+    echo "= Copied override-devops-ssh-keys/authorized_keys to /home/devops/.ssh/authorized_keys"
+fi
