@@ -262,6 +262,41 @@ Wrappers must validate the target path:
   - `sudo apt update`
   - `sudo apt upgrade`
 
+## Additional explanation of some commands
+
+### devops-self-update
+Used to update wrapper scripts enforcing access restrictions.
+
+**Control model:**
+* Can be disabled entirely if required by the client
+* Can be restricted to manual execution under client-controlled root session
+* Can be configured to pull from a client-controlled fork instead of the upstream repository
+
+**Transparency:**
+* All changes are publicly visible via version control history
+* No hidden or automatic background updates are performed
+
+### devops_mcedit (partially elevated editing)
+
+This command enables controlled editing of system configuration files.
+
+**How it works:**
+1. File is validated against allowlisted paths
+2. File is copied to a temporary location (`/tmp`)
+3. Editing is performed as a non-privileged `devops` user
+4. Modified file is copied back with elevated privileges
+
+**Security properties:**
+* The editor itself runs without privileges
+* No access to arbitrary files via editor menus
+* No ability to escape into restricted paths
+* Only allowlisted files can be modified
+
+## Logging
+
+### Visibility
+* `/var/log/auth.log`
+
 ## Security notes
 
 - This is a “reduce practical access” model, not a cryptographic guarantee.
