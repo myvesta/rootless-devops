@@ -14,7 +14,26 @@ cd /home/devops
 
 echo "== Installing rootless-devops software"
 
-repo_url="https://github.com/myvesta/rootless-devops.git"
+if [ ! -z "$1" ]; then
+    repo_url="$1"
+    echo "$repo_url" > /usr/local/bin/devops-repo-url
+    chmod 0600 /usr/local/bin/devops-repo-url
+    chown root:root /usr/local/bin/devops-repo-url
+    echo "= Repository URL set to: $repo_url"
+else
+    repo_url="https://github.com/myvesta/rootless-devops.git"
+fi
+
+if [ ! -z "$2" ]; then
+    repo_folder_name="$2"
+    echo "$repo_folder_name" > /usr/local/bin/devops-repo-folder-name
+    chmod 0600 /usr/local/bin/devops-repo-folder-name
+    chown root:root /usr/local/bin/devops-repo-folder-name
+    echo "= Repository folder name set to: $repo_folder_name"
+else
+    repo_folder_name="rootless-devops"
+fi
+
 if [ -f "/usr/local/bin/devops-repo-url" ]; then
     repo_url_owner=$(stat -c "%U" /usr/local/bin/devops-repo-url)
     repo_url_group=$(stat -c "%G" /usr/local/bin/devops-repo-url)
@@ -25,7 +44,6 @@ if [ -f "/usr/local/bin/devops-repo-url" ]; then
     fi
 fi
 
-repo_folder_name="rootless-devops"
 if [ -f "/usr/local/bin/devops-repo-folder-name" ]; then
     repo_folder_name_owner=$(stat -c "%U" /usr/local/bin/devops-repo-folder-name)
     repo_folder_name_group=$(stat -c "%G" /usr/local/bin/devops-repo-folder-name)
