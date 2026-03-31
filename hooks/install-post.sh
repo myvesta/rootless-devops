@@ -1,8 +1,11 @@
 #!/bin/bash
 
 if [ -d "override" ]; then
-    cp override/* /usr/local/bin/
-    echo "= Copied override files to /usr/local/bin/"
+    files_count=$(ls -1 override/ 2>/dev/null | wc -l)
+    if [ $files_count -gt 0 ]; then
+        cp override/* /usr/local/bin/
+        echo "= Copied override files to /usr/local/bin/"
+    fi
 fi
 
 if [ -f "/usr/local/bin/devops-override-conf" ]; then
